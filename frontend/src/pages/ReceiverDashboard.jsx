@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import AnimatedPage from '../components/AnimatedPage'
 import GlassCard from '../components/GlassCard'
@@ -61,6 +61,55 @@ export default function ReceiverDashboard() {
   const [confirmAction, setConfirmAction] = useState(null)
   const [actionLoading, setActionLoading] = useState(null)
   const [uploadingQr, setUploadingQr] = useState(false)
+  const [notifications, setNotifications] = useState([])
+  const prevPendingIdsRef = useRef(new Set())
+  const isFirstLoadRef = useRef(true)
+
+  const playChime = () => {
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+      const osc = audioCtx.createOscillator()
+      const gain = audioCtx.createGain()
+      osc.connect(gain)
+      gain.connect(audioCtx.destination)
+      const now = audioCtx.currentTime
+
+      // E5 note
+      osc.frequency.setValueAtTime(659.25, now)
+      gain.gain.setValueAtTime(0, now)
+      gain.gain.linearRampToValueAtTime(0.15, now + 0.05)
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25)
+
+      // A5 note
+      osc.frequency.setValueAtTime(880, now + 0.2)
+      gain.gain.setValueAtTime(0, now + 0.2)
+      gain.gain.linearRampToValueAtTime(0.2, now + 0.25)
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.65)
+
+      osc.start(now)
+      osc.stop(now + 0.7)
+    } catch (e) {
+      console.error('Audio Context failed:', e)
+    }
+  }
+
+  const triggerNotification = (txn) => {
+    playChime()
+    const newNotification = {
+      id: txn.request_id,
+      client: txn.sender_username || txn.username || 'Client',
+      amount: txn.amount,
+      purpose: txn.purpose || '',
+    }
+    setNotifications((prev) => {
+      // Avoid duplicate alerts for the same ID
+      if (prev.some((n) => n.id === txn.request_id)) return prev
+      return [...prev, newNotification]
+    })
+    setTimeout(() => {
+      setNotifications((prev) => prev.filter((n) => n.id !== txn.request_id))
+    }, 5000)
+  }
 
   const handleQrUpload = (e) => {
     const file = e.target.files[0]
@@ -95,6 +144,19 @@ export default function ReceiverDashboard() {
         )
         setTransactions(sorted)
 
+        const currentPending = sorted.filter((t) => t.status?.toLowerCase() === 'pending')
+        if (isFirstLoadRef.current) {
+          prevPendingIdsRef.current = new Set(currentPending.map((t) => t.request_id))
+          isFirstLoadRef.current = false
+        } else {
+          currentPending.forEach((txn) => {
+            if (!prevPendingIdsRef.current.has(txn.request_id)) {
+              triggerNotification(txn)
+            }
+          })
+          prevPendingIdsRef.current = new Set(currentPending.map((t) => t.request_id))
+        }
+
         if (statsRes.status === 'fulfilled') {
           const sData = statsRes.value.data
           setStats({
@@ -126,6 +188,13 @@ export default function ReceiverDashboard() {
 
   useEffect(() => {
     fetchData()
+  }, [fetchData])
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchData()
+    }, 8000)
+    return () => clearInterval(interval)
   }, [fetchData])
 
   useEffect(() => {
@@ -538,6 +607,42 @@ export default function ReceiverDashboard() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Floating Notifications Container */}
+        <div className="fixed right-6 top-6 z-[200] flex w-full max-w-sm flex-col gap-3">
+          <AnimatePresence>
+            {notifications.map((notif) => (
+              <motion.div
+                key={notif.id}
+                initial={{ opacity: 0, x: 50, y: -20, scale: 0.9 }}
+                animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9, y: 10, transition: { duration: 0.2 } }}
+                className="glass relative flex items-start gap-4 overflow-hidden rounded-2xl p-5 shadow-2xl border border-white/20 bg-white/80 backdrop-blur-xl"
+              >
+                {/* Accent top bar */}
+                <div className="absolute left-0 right-0 top-0 h-1 bg-status-pending" />
+                <div className="mt-1 text-2xl">🔔</div>
+                <div className="flex-1">
+                  <h4 className="text-sm font-bold text-apple-dark">New Payment Request</h4>
+                  <p className="mt-1 text-xs text-apple-dark/60">
+                    <span className="font-semibold">{notif.client}</span> has requested approval for <span className="font-bold text-apple-dark">{formatCurrency(notif.amount)}</span>.
+                  </p>
+                  {notif.purpose && (
+                    <p className="mt-1 text-[10px] italic text-apple-dark/40">
+                      Purpose: {notif.purpose}
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={() => setNotifications((prev) => prev.filter((n) => n.id !== notif.id))}
+                  className="p-1 text-xs font-bold text-apple-dark/30 hover:text-apple-dark"
+                >
+                  ✕
+                </button>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
       </div>
     </AnimatedPage>
   )
