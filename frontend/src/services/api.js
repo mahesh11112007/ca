@@ -35,10 +35,10 @@ export const register = (username, password, role) =>
 
 export const getMe = () => api.get('/api/auth/me')
 
-export const getTransactions = () => api.get('/api/transactions/')
+export const getTransactions = () => api.get('/api/transactions')
 
 export const createTransaction = (data) =>
-  api.post('/api/transactions/', data)
+  api.post('/api/transactions', data)
 
 export const approveTransaction = (id) =>
   api.patch(`/api/transactions/${id}/approve`)

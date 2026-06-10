@@ -45,6 +45,11 @@ def create_app():
     # Initialize database tables
     with app.app_context():
         init_db()
+        try:
+            from seed_users import seed_users
+            seed_users()
+        except Exception as e:
+            print(f"Error seeding users: {e}")
 
     # --- Teardown: close DB session after each request ---
     @app.teardown_appcontext

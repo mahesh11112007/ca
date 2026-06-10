@@ -25,6 +25,7 @@ def _get_db_session():
     return db
 
 
+@transactions_bp.route("", methods=["POST"])
 @transactions_bp.route("/", methods=["POST"])
 @token_required
 @role_required("Sender")
@@ -47,6 +48,7 @@ def create(current_user):
     return jsonify(response), status_code
 
 
+@transactions_bp.route("", methods=["GET"])
 @transactions_bp.route("/", methods=["GET"])
 @token_required
 def list_transactions(current_user):
