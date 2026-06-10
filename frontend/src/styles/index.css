@@ -1,0 +1,61 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-apple-white: #FFFFFF;
+  --color-apple-light: #F5F5F7;
+  --color-apple-mid: #E5E5E7;
+  --color-apple-dark: #1D1D1F;
+  --color-apple-black: #000000;
+  --color-status-pending: #FF9500;
+  --color-status-approved: #34C759;
+  --color-status-rejected: #FF3B30;
+  --font-sans: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-apple-light);
+  color: var(--color-apple-dark);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background-color: var(--color-apple-dark);
+  color: var(--color-apple-white);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+}
