@@ -32,18 +32,18 @@ def check_and_generate_vapid():
                     f.write(f"\n# Auto-generated Web Push VAPID keys\n")
                     f.write(f"VAPID_PUBLIC_KEY={public_key_b64}\n")
                     f.write(f"VAPID_PRIVATE_KEY={private_key_b64}\n")
-                    f.write(f"VAPID_CLAIM_EMAIL=mailto:support@caledger.com\n")
+                    f.write(f"VAPID_CLAIM_EMAIL=mailto:vilasagarammahesh90@gmail.com\n")
                 
                 os.environ["VAPID_PUBLIC_KEY"] = public_key_b64
                 os.environ["VAPID_PRIVATE_KEY"] = private_key_b64
-                os.environ["VAPID_CLAIM_EMAIL"] = "mailto:support@caledger.com"
+                os.environ["VAPID_CLAIM_EMAIL"] = "mailto:vilasagarammahesh90@gmail.com"
                 print("Generated persistent VAPID keys and updated local .env file.")
                 return
 
         # Fallback to in-memory keys
         os.environ["VAPID_PUBLIC_KEY"] = public_key_b64
         os.environ["VAPID_PRIVATE_KEY"] = private_key_b64
-        os.environ["VAPID_CLAIM_EMAIL"] = "mailto:support@caledger.com"
+        os.environ["VAPID_CLAIM_EMAIL"] = "mailto:vilasagarammahesh90@gmail.com"
         print("Generated in-memory VAPID keys.")
     except Exception as e:
         print(f"Failed to auto-generate VAPID keys: {e}")
@@ -79,7 +79,7 @@ class Settings:
 
         self.VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY")
         self.VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY")
-        self.VAPID_CLAIM_EMAIL = os.environ.get("VAPID_CLAIM_EMAIL", "mailto:support@caledger.com")
+        self.VAPID_CLAIM_EMAIL = os.environ.get("VAPID_CLAIM_EMAIL", "mailto:vilasagarammahesh90@gmail.com")
 
 
 def get_settings() -> Settings:
