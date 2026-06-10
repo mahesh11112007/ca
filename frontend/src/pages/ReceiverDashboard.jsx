@@ -4,7 +4,7 @@ import AnimatedPage from '../components/AnimatedPage'
 import GlassCard from '../components/GlassCard'
 import StatusBadge from '../components/StatusBadge'
 import EmptyState from '../components/EmptyState'
-import { getTransactions, approveTransaction, rejectTransaction, getDashboardStats, uploadQrCode } from '../services/api'
+import { getTransactions, approveTransaction, rejectTransaction, getDashboardStats, uploadQrCode, getVapidPublicKey, savePushSubscription } from '../services/api'
 import { formatCurrency, formatDate, formatTime, truncateText } from '../utils/helpers'
 
 const cardVariants = {
@@ -129,6 +129,64 @@ export default function ReceiverDashboard() {
     }
     reader.readAsDataURL(file)
   }
+
+  const urlBase64ToUint8Array = (base64String) => {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
+    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/')
+    const rawData = window.atob(base64)
+    const outputArray = new Uint8Array(rawData.length)
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i)
+    }
+    return outputArray
+  }
+
+  const setupPushNotifications = async () => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      console.warn('Push notifications are not supported in this browser.')
+      return
+    }
+
+    try {
+      const registration = await navigator.serviceWorker.register('/service-worker.js')
+      
+      let permission = Notification.permission
+      if (permission === 'default') {
+        permission = await Notification.requestPermission()
+      }
+
+      if (permission !== 'granted') {
+        console.warn('Notification permission denied.')
+        return
+      }
+
+      const keyRes = await getVapidPublicKey()
+      const vapidPublicKey = keyRes.data.public_key
+      if (!vapidPublicKey) {
+        console.warn('VAPID public key not found on server.')
+        return
+      }
+
+      const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey)
+      let subscription = await registration.pushManager.getSubscription()
+
+      if (subscription) {
+        await savePushSubscription(subscription.toJSON())
+      } else {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: applicationServerKey
+        })
+        await savePushSubscription(subscription.toJSON())
+      }
+    } catch (err) {
+      console.error('Failed to set up push notifications:', err)
+    }
+  }
+
+  useEffect(() => {
+    setupPushNotifications()
+  }, [])
 
   const fetchData = useCallback(async () => {
     try {

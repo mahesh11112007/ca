@@ -1,0 +1,16 @@
+{
+  "short_name": "CA Ledger",
+  "name": "CA Ledger Management System",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#F5F5F7",
+  "theme_color": "#1D1D1F",
+  "display": "standalone",
+  "orientation": "portrait"
+}

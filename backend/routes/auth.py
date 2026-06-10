@@ -94,3 +94,33 @@ def get_qr(current_user):
     
     qr_code = receiver.qr_code if receiver else None
     return jsonify({"qr_code": qr_code}), 200
+
+
+@auth_bp.route("/vapid-public-key", methods=["GET"])
+def get_vapid_public_key():
+    """Get the VAPID Public Key for Web Push subscriptions."""
+    from config.settings import get_settings
+    settings = get_settings()
+    return jsonify({"public_key": settings.VAPID_PUBLIC_KEY}), 200
+
+
+@auth_bp.route("/subscribe", methods=["POST"])
+@token_required
+def subscribe(current_user):
+    """Save the current user's Web Push subscription."""
+    data = request.get_json(silent=True)
+    if not data or "subscription" not in data:
+        return jsonify({"error": "Missing subscription in request body"}), 400
+
+    import json
+    db = _get_db_session()
+    
+    # Store subscription as JSON string
+    subscription_data = data["subscription"]
+    if subscription_data is None:
+        current_user.push_subscription = None
+    else:
+        current_user.push_subscription = json.dumps(subscription_data)
+
+    db.commit()
+    return jsonify({"message": "Web Push subscription saved successfully"}), 200

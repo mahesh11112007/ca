@@ -35,6 +35,33 @@ def create_transaction(db_session, sender, data: dict) -> tuple:
     if not transaction.sender:
         transaction.sender = sender
 
+    # Send background push notifications to Receivers
+    try:
+        receivers = db_session.query(User).filter(
+            User.role == "Receiver",
+            User.push_subscription.isnot(None)
+        ).all()
+        subscriptions = [r.push_subscription for r in receivers]
+        
+        if subscriptions:
+            import threading
+            from utils.push import send_push_notification
+            
+            payload = {
+                "title": "New Payment Request",
+                "body": f"{sender.username} notified a payment of ₹{float(transaction.amount):,.2f}",
+                "url": "/receiver",
+                "request_id": str(transaction.request_id)
+            }
+            
+            def send_async():
+                for sub in subscriptions:
+                    send_push_notification(sub, payload)
+                    
+            threading.Thread(target=send_async).start()
+    except Exception as e:
+        print(f"Failed to trigger push notify thread: {e}")
+
     return {"transaction": transaction.to_dict()}, 201
 
 
