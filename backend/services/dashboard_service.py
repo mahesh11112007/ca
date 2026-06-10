@@ -40,19 +40,37 @@ def get_dashboard_stats(db_session) -> dict:
         or 0
     )
 
-    # Sum of approved amounts
-    total_amount_approved = (
-        db_session.query(
-            func.coalesce(func.sum(Transaction.amount), 0)
-        )
-        .filter(Transaction.status == "Approved")
+    # Sum of approved amounts by type
+    approved_payments_sum = (
+        db_session.query(func.coalesce(func.sum(Transaction.amount), 0))
+        .filter(Transaction.status == "Approved", Transaction.type == "Payment")
         .scalar()
+        or 0
     )
+
+    approved_requests_sum = (
+        db_session.query(func.coalesce(func.sum(Transaction.amount), 0))
+        .filter(Transaction.status == "Approved", Transaction.type == "Request")
+        .scalar()
+        or 0
+    )
+
+    approved_debts_sum = (
+        db_session.query(func.coalesce(func.sum(Transaction.amount), 0))
+        .filter(Transaction.status == "Approved", Transaction.type == "Debt")
+        .scalar()
+        or 0
+    )
+
+    net_balance = float(approved_payments_sum - approved_requests_sum - approved_debts_sum)
 
     return {
         "total_requests": total_requests,
         "pending_requests": pending_requests,
         "approved_requests": approved_requests,
         "rejected_requests": rejected_requests,
-        "total_amount_approved": float(total_amount_approved),
+        "total_payments_approved": float(approved_payments_sum),
+        "total_requests_approved": float(approved_requests_sum),
+        "total_debts_approved": float(approved_debts_sum),
+        "net_balance": net_balance,
     }

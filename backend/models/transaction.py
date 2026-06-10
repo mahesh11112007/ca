@@ -34,6 +34,7 @@ class Transaction(Base):
     amount = Column(Numeric(12, 2), nullable=False)
     purpose = Column(Text, nullable=True)
     status = Column(String(20), default="Pending", nullable=False, index=True)
+    type = Column(String(20), default="Payment", nullable=False, index=True)
     created_at = Column(
         DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
     )
@@ -56,6 +57,10 @@ class Transaction(Base):
             "status IN ('Pending', 'Approved', 'Rejected')",
             name="ck_transactions_status",
         ),
+        CheckConstraint(
+            "type IN ('Payment', 'Request', 'Debt')",
+            name="ck_transactions_type",
+        ),
     )
 
     def to_dict(self):
@@ -67,6 +72,7 @@ class Transaction(Base):
             "amount": float(self.amount) if self.amount is not None else None,
             "purpose": self.purpose,
             "status": self.status,
+            "type": self.type,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

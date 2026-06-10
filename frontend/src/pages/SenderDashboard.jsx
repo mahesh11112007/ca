@@ -4,7 +4,7 @@ import AnimatedPage from '../components/AnimatedPage'
 import GlassCard from '../components/GlassCard'
 import StatusBadge from '../components/StatusBadge'
 import EmptyState from '../components/EmptyState'
-import { getTransactions, createTransaction, getQrCode } from '../services/api'
+import { getTransactions, createTransaction, getQrCode, getDashboardStats } from '../services/api'
 import { formatCurrency, formatDate, formatTime } from '../utils/helpers'
 
 const listItemVariants = {
@@ -27,10 +27,25 @@ const purposeSuggestions = [
   'ROC Filing',
 ]
 
+const TypeBadge = ({ type }) => {
+  const styles = {
+    Payment: 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20',
+    Request: 'bg-blue-500/10 text-blue-600 border border-blue-500/20',
+    Debt: 'bg-red-500/10 text-red-600 border border-red-500/20',
+  }
+  return (
+    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${styles[type] || styles.Payment}`}>
+      {type === 'Payment' ? 'Sent Payment' : type === 'Request' ? 'Requested' : 'Debt'}
+    </span>
+  )
+}
+
 export default function SenderDashboard() {
   const [transactions, setTransactions] = useState([])
   const [amount, setAmount] = useState('')
   const [purpose, setPurpose] = useState('')
+  const [type, setType] = useState('Payment')
+  const [stats, setStats] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [loadingTxns, setLoadingTxns] = useState(true)
@@ -39,9 +54,10 @@ export default function SenderDashboard() {
 
   const fetchTransactions = async () => {
     try {
-      const [qrRes, txnRes] = await Promise.allSettled([
+      const [qrRes, txnRes, statsRes] = await Promise.allSettled([
         getQrCode(),
-        getTransactions()
+        getTransactions(),
+        getDashboardStats()
       ])
       
       if (qrRes.status === 'fulfilled' && qrRes.value.data.qr_code) {
@@ -54,6 +70,10 @@ export default function SenderDashboard() {
           (a, b) => new Date(b.created_at) - new Date(a.created_at)
         )
         setTransactions(sorted)
+      }
+
+      if (statsRes.status === 'fulfilled') {
+        setStats(statsRes.value.data)
       }
     } catch {
       // silently handle
@@ -72,7 +92,11 @@ export default function SenderDashboard() {
     if (!amount || parseFloat(amount) <= 0) return
     setIsSubmitting(true)
     try {
-      await createTransaction({ amount: parseFloat(amount), purpose: purpose || undefined })
+      await createTransaction({
+        amount: parseFloat(amount),
+        purpose: purpose || undefined,
+        type: type
+      })
       setAmount('')
       setPurpose('')
       setShowSuccess(true)
@@ -93,8 +117,39 @@ export default function SenderDashboard() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8 text-2xl font-bold tracking-tight text-apple-dark sm:text-3xl"
         >
-          Dashboard
+          Sender Dashboard
         </motion.h2>
+
+        {/* Dynamic Net Ledger Balance Card */}
+        {stats && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className="mb-8"
+          >
+            <GlassCard className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-6 bg-gradient-to-r from-apple-dark to-apple-black text-white shadow-xl">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-white/60">
+                  Total Ledger Balance
+                </p>
+                <h3 className="mt-1 text-3xl font-extrabold tracking-tight">
+                  {formatCurrency(stats.net_balance)}
+                </h3>
+              </div>
+              <div className="mt-4 sm:mt-0 flex gap-6 text-sm text-white/80">
+                <div>
+                  <span className="block text-xs text-white/50">Total Payments Sent</span>
+                  <span className="font-semibold">{formatCurrency(stats.total_payments_approved)}</span>
+                </div>
+                <div className="border-l border-white/20 pl-6">
+                  <span className="block text-xs text-white/50">Total Disbursements Received</span>
+                  <span className="font-semibold">{formatCurrency(stats.total_requests_approved)}</span>
+                </div>
+              </div>
+            </GlassCard>
+          </motion.div>
+        )}
 
         <div className="mb-10 grid gap-6 md:grid-cols-2">
           <motion.div
@@ -141,9 +196,32 @@ export default function SenderDashboard() {
             transition={{ delay: 0.2 }}
           >
             <GlassCard className="shadow-lg shadow-black/5">
-              <h3 className="mb-6 text-lg font-semibold text-apple-dark">
-                Notify Payment
-              </h3>
+              {/* Type Switcher */}
+              <div className="mb-6 flex rounded-xl bg-apple-light p-1">
+                <button
+                  type="button"
+                  onClick={() => setType('Payment')}
+                  className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all ${
+                    type === 'Payment'
+                      ? 'bg-white text-apple-dark shadow-sm'
+                      : 'text-apple-dark/40 hover:text-apple-dark/60'
+                  }`}
+                >
+                  Notify Payment
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setType('Request')}
+                  className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all ${
+                    type === 'Request'
+                      ? 'bg-white text-apple-dark shadow-sm'
+                      : 'text-apple-dark/40 hover:text-apple-dark/60'
+                  }`}
+                >
+                  Request Money
+                </button>
+              </div>
+
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
                   <label htmlFor="payment-amount" className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-apple-dark/40">
@@ -169,15 +247,16 @@ export default function SenderDashboard() {
 
                 <div>
                   <label htmlFor="payment-purpose" className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-apple-dark/40">
-                    Purpose (Optional)
+                    Justification / Purpose {type === 'Request' && '(Required)'}
                   </label>
                   <input
                     id="payment-purpose"
                     type="text"
                     value={purpose}
                     onChange={(e) => setPurpose(e.target.value)}
+                    required={type === 'Request'}
                     list="purpose-suggestions"
-                    placeholder="e.g., GST Filing"
+                    placeholder={type === 'Payment' ? 'e.g., GST Filing' : 'e.g., Client Travel Expenses'}
                     className="w-full rounded-xl border border-apple-mid bg-white/50 px-4 py-3 text-apple-dark placeholder-apple-dark/20 transition-all focus:border-apple-dark/30 focus:ring-2 focus:ring-apple-dark/10"
                   />
                   <datalist id="purpose-suggestions">
@@ -204,7 +283,7 @@ export default function SenderDashboard() {
                       Submitting...
                     </span>
                   ) : (
-                    'Submit Payment'
+                    type === 'Payment' ? 'Submit Payment' : 'Request Money'
                   )}
                 </motion.button>
               </form>
@@ -217,7 +296,7 @@ export default function SenderDashboard() {
                     exit={{ opacity: 0, y: -10 }}
                     className="mt-4 rounded-xl bg-status-approved/10 px-4 py-3 text-sm font-medium text-status-approved"
                   >
-                    ✓ Payment notification sent successfully!
+                    ✓ {type === 'Payment' ? 'Payment notification sent successfully!' : 'Money request sent successfully!'}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -230,7 +309,7 @@ export default function SenderDashboard() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
-          <h3 className="mb-4 text-lg font-semibold text-apple-dark">Payment History</h3>
+          <h3 className="mb-4 text-lg font-semibold text-apple-dark">Transaction History</h3>
 
           {loadingTxns ? (
             <div className="flex items-center justify-center py-16">
@@ -248,8 +327,8 @@ export default function SenderDashboard() {
           ) : transactions.length === 0 ? (
             <EmptyState
               icon="💸"
-              title="No payments yet"
-              subtitle="Your payment history will appear here once you submit a payment notification."
+              title="No transactions yet"
+              subtitle="Your transaction history will appear here once you submit a payment or request."
             />
           ) : (
             <div className="grid gap-3">
@@ -265,9 +344,12 @@ export default function SenderDashboard() {
                   <GlassCard padding="p-5" className="shadow-sm shadow-black/5">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div className="flex-1">
-                        <p className="text-xl font-bold text-apple-dark">
-                          {formatCurrency(txn.amount)}
-                        </p>
+                        <div className="flex items-center gap-3">
+                          <p className="text-xl font-bold text-apple-dark">
+                            {formatCurrency(txn.amount)}
+                          </p>
+                          <TypeBadge type={txn.type} />
+                        </div>
                         {txn.purpose && (
                           <p className="mt-1 text-sm text-apple-dark/50">{txn.purpose}</p>
                         )}

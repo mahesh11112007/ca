@@ -28,12 +28,12 @@ def _get_db_session():
 @transactions_bp.route("", methods=["POST"])
 @transactions_bp.route("/", methods=["POST"])
 @token_required
-@role_required("Sender")
+@role_required("Sender", "Receiver")
 def create(current_user):
     """Create a new transaction request.
 
-    Only accessible by users with 'Sender' role.
-    Expects JSON body with: amount (required), purpose (optional).
+    Senders can create Payments or Requests.
+    Receivers can create Debts.
     """
     data = request.get_json(silent=True)
     if data is None:
@@ -55,14 +55,15 @@ def list_transactions(current_user):
     """List transactions with optional filtering.
 
     Senders see only their own transactions. Receivers see all.
-    Query params: status (Pending|Approved|Rejected), search (string).
+    Query params: status (Pending|Approved|Rejected), type (Payment|Request|Debt), search (string).
     """
     status_filter = request.args.get("status")
+    type_filter = request.args.get("type")
     search = request.args.get("search")
 
     db = _get_db_session()
     response, status_code = get_transactions(
-        db, current_user, status_filter=status_filter, search=search
+        db, current_user, status_filter=status_filter, type_filter=type_filter, search=search
     )
     return jsonify(response), status_code
 

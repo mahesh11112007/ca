@@ -91,7 +91,7 @@ def validate_transaction(data):
     """Validate transaction creation data.
 
     Args:
-        data: dict with amount and optional purpose fields.
+        data: dict with amount, type, and optional purpose fields.
 
     Returns:
         tuple: (cleaned_data_dict, None) on success or (None, error_string) on failure.
@@ -120,11 +120,17 @@ def validate_transaction(data):
     if purpose is not None and not isinstance(purpose, str):
         errors.append("Purpose must be a string")
 
+    # Type validation (optional)
+    txn_type = data.get("type", "Payment")
+    if txn_type not in ("Payment", "Request", "Debt"):
+        errors.append("Type must be one of: Payment, Request, Debt")
+
     if errors:
         return None, "; ".join(errors)
 
     cleaned = {
         "amount": Decimal(str(amount)),
         "purpose": purpose.strip() if purpose else None,
+        "type": txn_type,
     }
     return cleaned, None

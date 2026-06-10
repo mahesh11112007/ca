@@ -11,20 +11,32 @@ from models.audit_log import AuditLog
 
 
 def create_transaction(db_session, sender, data: dict) -> tuple:
-    """Create a new transaction request.
+    """Create a new transaction request (Payment, Request, or Debt).
 
     Args:
         db_session: SQLAlchemy database session.
         sender: The User object of the sender creating the transaction.
-        data: Validated dict with amount and optional purpose.
+        data: Validated dict with amount, type, and optional purpose.
 
     Returns:
         tuple: (response_dict, status_code)
     """
+    transaction_type = data.get("type", "Payment")
+    initial_status = "Approved" if transaction_type == "Debt" else "Pending"
+
+    # Validation: Senders can only create Payment or Request
+    if sender.role == "Sender" and transaction_type not in ("Payment", "Request"):
+        return {"error": "Senders can only submit Payments or Requests"}, 403
+    # Receivers can only create Debt
+    if sender.role == "Receiver" and transaction_type != "Debt":
+        return {"error": "Receivers can only record Debt/Withdrawal transactions"}, 403
+
     transaction = Transaction(
         sender_id=sender.id,
         amount=data["amount"],
         purpose=data.get("purpose"),
+        type=transaction_type,
+        status=initial_status,
     )
 
     db_session.add(transaction)
@@ -35,37 +47,42 @@ def create_transaction(db_session, sender, data: dict) -> tuple:
     if not transaction.sender:
         transaction.sender = sender
 
-    # Send background push notifications to Receivers
+    # Send background push notifications to Receivers/Senders if needed
     try:
-        receivers = db_session.query(User).filter(
-            User.role == "Receiver",
-            User.push_subscription.isnot(None)
-        ).all()
-        subscriptions = [r.push_subscription for r in receivers]
-        
-        if subscriptions:
-            import threading
-            from utils.push import send_push_notification
+        # If Sender requested money or made a payment, notify Receivers
+        if sender.role == "Sender" and transaction_type in ("Payment", "Request"):
+            receivers = db_session.query(User).filter(
+                User.role == "Receiver",
+                User.push_subscription.isnot(None)
+            ).all()
+            subscriptions = [r.push_subscription for r in receivers]
             
-            payload = {
-                "title": "New Payment Request",
-                "body": f"{sender.username} notified a payment of ₹{float(transaction.amount):,.2f}",
-                "url": "/receiver",
-                "request_id": str(transaction.request_id)
-            }
-            
-            def send_async():
-                for sub in subscriptions:
-                    send_push_notification(sub, payload)
-                    
-            threading.Thread(target=send_async).start()
+            if subscriptions:
+                import threading
+                from utils.push import send_push_notification
+                
+                title = "New Payment Notification" if transaction_type == "Payment" else "New Money Request"
+                body = f"{sender.username} notified a payment of ₹{float(transaction.amount):,.2f}" if transaction_type == "Payment" else f"{sender.username} requested ₹{float(transaction.amount):,.2f}"
+                
+                payload = {
+                    "title": title,
+                    "body": body,
+                    "url": "/receiver",
+                    "request_id": str(transaction.request_id)
+                }
+                
+                def send_async():
+                    for sub in subscriptions:
+                        send_push_notification(sub, payload)
+                        
+                threading.Thread(target=send_async).start()
     except Exception as e:
         print(f"Failed to trigger push notify thread: {e}")
 
     return {"transaction": transaction.to_dict()}, 201
 
 
-def get_transactions(db_session, user, status_filter=None, search=None) -> tuple:
+def get_transactions(db_session, user, status_filter=None, type_filter=None, search=None) -> tuple:
     """Get transactions with optional filtering and search.
 
     Senders see only their own transactions. Receivers see all.
@@ -74,6 +91,7 @@ def get_transactions(db_session, user, status_filter=None, search=None) -> tuple
         db_session: SQLAlchemy database session.
         user: The current User object.
         status_filter: Optional status string to filter by.
+        type_filter: Optional transaction type string to filter by.
         search: Optional search string for username, purpose, or amount.
 
     Returns:
@@ -90,6 +108,10 @@ def get_transactions(db_session, user, status_filter=None, search=None) -> tuple
     # Status filter
     if status_filter and status_filter in ("Pending", "Approved", "Rejected"):
         query = query.filter(Transaction.status == status_filter)
+
+    # Type filter
+    if type_filter and type_filter in ("Payment", "Request", "Debt"):
+        query = query.filter(Transaction.type == type_filter)
 
     # Search filter
     if search:

@@ -4,7 +4,7 @@ import AnimatedPage from '../components/AnimatedPage'
 import GlassCard from '../components/GlassCard'
 import StatusBadge from '../components/StatusBadge'
 import EmptyState from '../components/EmptyState'
-import { getTransactions, approveTransaction, rejectTransaction, getDashboardStats, uploadQrCode, getVapidPublicKey, savePushSubscription } from '../services/api'
+import { getTransactions, approveTransaction, rejectTransaction, getDashboardStats, uploadQrCode, getVapidPublicKey, savePushSubscription, createTransaction } from '../services/api'
 import { formatCurrency, formatDate, formatTime, truncateText } from '../utils/helpers'
 
 const cardVariants = {
@@ -45,6 +45,19 @@ function AnimatedNumber({ value, isCurrency = false }) {
   )
 }
 
+const TypeBadge = ({ type }) => {
+  const styles = {
+    Payment: 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20',
+    Request: 'bg-blue-500/10 text-blue-600 border border-blue-500/20',
+    Debt: 'bg-red-500/10 text-red-600 border border-red-500/20',
+  }
+  return (
+    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${styles[type] || styles.Payment}`}>
+      {type === 'Payment' ? 'Payment' : type === 'Request' ? 'Request' : 'Debt'}
+    </span>
+  )
+}
+
 export default function ReceiverDashboard() {
   const [transactions, setTransactions] = useState([])
   const [stats, setStats] = useState({
@@ -53,6 +66,10 @@ export default function ReceiverDashboard() {
     approved: 0,
     rejected: 0,
     totalAmount: 0,
+    netBalance: 0,
+    totalPayments: 0,
+    totalRequests: 0,
+    totalDebts: 0,
   })
   const [filter, setFilter] = useState('All')
   const [search, setSearch] = useState('')
@@ -62,6 +79,13 @@ export default function ReceiverDashboard() {
   const [actionLoading, setActionLoading] = useState(null)
   const [uploadingQr, setUploadingQr] = useState(false)
   const [notifications, setNotifications] = useState([])
+  
+  // Debt recording modal states
+  const [showDebtModal, setShowDebtModal] = useState(false)
+  const [debtAmount, setDebtAmount] = useState('')
+  const [debtPurpose, setDebtPurpose] = useState('')
+  const [debtSubmitting, setDebtSubmitting] = useState(false)
+
   const prevPendingIdsRef = useRef(new Set())
   const isFirstLoadRef = useRef(true)
 
@@ -223,17 +247,26 @@ export default function ReceiverDashboard() {
             approved: sData.approved_requests || 0,
             rejected: sData.rejected_requests || 0,
             totalAmount: sData.total_amount_approved || 0,
+            netBalance: sData.net_balance || 0,
+            totalPayments: sData.total_payments_approved || 0,
+            totalRequests: sData.total_requests_approved || 0,
+            totalDebts: sData.total_debts_approved || 0,
           })
         } else {
           const all = sorted
+          const payments = all.filter((t) => t.status?.toLowerCase() === 'approved' && (t.type === 'Payment' || !t.type)).reduce((sum, t) => sum + (t.amount || 0), 0)
+          const requests = all.filter((t) => t.status?.toLowerCase() === 'approved' && t.type === 'Request').reduce((sum, t) => sum + (t.amount || 0), 0)
+          const debts = all.filter((t) => t.status?.toLowerCase() === 'approved' && t.type === 'Debt').reduce((sum, t) => sum + (t.amount || 0), 0)
           setStats({
             total: all.length,
             pending: all.filter((t) => t.status?.toLowerCase() === 'pending').length,
             approved: all.filter((t) => t.status?.toLowerCase() === 'approved').length,
             rejected: all.filter((t) => t.status?.toLowerCase() === 'rejected').length,
-            totalAmount: all
-              .filter((t) => t.status?.toLowerCase() === 'approved')
-              .reduce((sum, t) => sum + (t.amount || 0), 0),
+            totalAmount: payments,
+            netBalance: payments - requests - debts,
+            totalPayments: payments,
+            totalRequests: requests,
+            totalDebts: debts,
           })
         }
       }
@@ -301,12 +334,33 @@ export default function ReceiverDashboard() {
     }
   }
 
+  const handleDebtSubmit = async (e) => {
+    e.preventDefault()
+    if (!debtAmount || parseFloat(debtAmount) <= 0 || !debtPurpose) return
+    setDebtSubmitting(true)
+    try {
+      await createTransaction({
+        amount: parseFloat(debtAmount),
+        purpose: debtPurpose,
+        type: 'Debt'
+      })
+      setDebtAmount('')
+      setDebtPurpose('')
+      setShowDebtModal(false)
+      await fetchData()
+    } catch (err) {
+      alert('Failed to record spent money')
+    } finally {
+      setDebtSubmitting(false)
+    }
+  }
+
   const statCards = [
-    { label: 'Total Requests', value: stats.total, color: 'text-apple-dark' },
-    { label: 'Pending', value: stats.pending, color: 'text-status-pending' },
-    { label: 'Approved', value: stats.approved, color: 'text-status-approved' },
-    { label: 'Rejected', value: stats.rejected, color: 'text-status-rejected' },
-    { label: 'Total Approved', value: stats.totalAmount, isCurrency: true, color: 'text-status-approved' },
+    { label: 'Net Ledger Balance', value: stats.netBalance, isCurrency: true, color: 'text-apple-dark font-extrabold' },
+    { label: 'Payments Received', value: stats.totalPayments, isCurrency: true, color: 'text-status-approved' },
+    { label: 'Debts / Spent', value: stats.totalDebts, isCurrency: true, color: 'text-status-rejected' },
+    { label: 'Disbursed Requests', value: stats.totalRequests, isCurrency: true, color: 'text-blue-600' },
+    { label: 'Pending Items', value: stats.pending, color: 'text-status-pending' },
   ]
 
   const filters = ['All', 'Pending', 'Approved', 'Rejected']
@@ -353,19 +407,33 @@ export default function ReceiverDashboard() {
           transition={{ delay: 0.3 }}
           className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-3"
         >
-          {/* Settings / QR Card (Col span 1) */}
-          <GlassCard padding="p-4" className="shadow-sm shadow-black/5 flex flex-col justify-center">
-            <h3 className="mb-3 text-sm font-bold text-apple-dark">Payment Settings</h3>
-            <label className="relative flex cursor-pointer items-center justify-center rounded-xl border border-dashed border-apple-mid bg-white/30 py-3 text-sm font-medium text-apple-dark transition-colors hover:bg-white/50">
-              {uploadingQr ? 'Uploading...' : 'Upload New QR Code'}
-              <input 
-                type="file" 
-                accept="image/*" 
-                onChange={handleQrUpload} 
-                disabled={uploadingQr}
-                className="hidden" 
-              />
-            </label>
+          {/* Settings & Actions Card (Col span 1) */}
+          <GlassCard padding="p-4" className="shadow-sm shadow-black/5 flex flex-col justify-between gap-4">
+            <div>
+              <h3 className="mb-2 text-sm font-bold text-apple-dark">Payment Settings</h3>
+              <label className="relative flex cursor-pointer items-center justify-center rounded-xl border border-dashed border-apple-mid bg-white/30 py-2.5 text-xs font-semibold text-apple-dark transition-colors hover:bg-white/50">
+                {uploadingQr ? 'Uploading...' : 'Upload New QR Code'}
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={handleQrUpload} 
+                  disabled={uploadingQr}
+                  className="hidden" 
+                />
+              </label>
+            </div>
+            
+            <div className="border-t border-apple-mid/30 pt-3">
+              <h3 className="mb-2 text-sm font-bold text-apple-dark">Ledger Actions</h3>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setShowDebtModal(true)}
+                className="w-full rounded-xl bg-status-rejected/10 py-2.5 text-xs font-bold text-status-rejected hover:bg-status-rejected/20 transition-all border border-status-rejected/20"
+              >
+                Record Spent Money / Debt
+              </motion.button>
+            </div>
           </GlassCard>
 
           {/* Search & Filters (Col span 2) */}
@@ -452,7 +520,7 @@ export default function ReceiverDashboard() {
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-apple-mid/30">
-                        {['Request ID', 'Client', 'Amount', 'Purpose', 'Date', 'Time', 'Status', 'Actions'].map(
+                        {['Request ID', 'Client', 'Type', 'Amount', 'Purpose', 'Date', 'Time', 'Status', 'Actions'].map(
                           (header) => (
                             <th
                               key={header}
@@ -467,7 +535,7 @@ export default function ReceiverDashboard() {
                     <tbody>
                       <AnimatePresence>
                         {filteredTransactions.map((txn, i) => (
-                          <motion.tr
+                           <motion.tr
                             key={txn.request_id || i}
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
@@ -480,6 +548,9 @@ export default function ReceiverDashboard() {
                             </td>
                             <td className="px-5 py-4 text-sm font-medium text-apple-dark">
                               {txn.sender_username || txn.username || '-'}
+                            </td>
+                            <td className="px-5 py-4">
+                              <TypeBadge type={txn.type} />
                             </td>
                             <td className="px-5 py-4 text-sm font-bold text-apple-dark">
                               {formatCurrency(txn.amount)}
@@ -555,9 +626,12 @@ export default function ReceiverDashboard() {
                     <GlassCard padding="p-5" className="shadow-sm shadow-black/5">
                       <div className="mb-3 flex items-start justify-between">
                         <div>
-                          <p className="text-sm font-medium text-apple-dark">
-                            {txn.sender_username || txn.username || '-'}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium text-apple-dark">
+                              {txn.sender_username || txn.username || '-'}
+                            </p>
+                            <TypeBadge type={txn.type} />
+                          </div>
                           <p className="font-mono text-xs text-apple-dark/30">
                             {truncateText(txn.request_id || '', 8)}
                           </p>
@@ -661,6 +735,84 @@ export default function ReceiverDashboard() {
                     {actionLoading ? 'Processing...' : confirmAction.action === 'approve' ? 'Approve' : 'Reject'}
                   </motion.button>
                 </div>
+              </motion.div>
+            </motion.div>
+          )}
+          
+          {showDebtModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 px-4 backdrop-blur-sm"
+              onClick={() => setShowDebtModal(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                onClick={(e) => e.stopPropagation()}
+                className="glass w-full max-w-sm rounded-3xl p-8 shadow-2xl"
+              >
+                <h3 className="mb-4 text-lg font-bold text-apple-dark">
+                  Record Spent Money / Debt
+                </h3>
+                <form onSubmit={handleDebtSubmit} className="space-y-4">
+                  <div>
+                    <label htmlFor="debt-amount" className="mb-1 block text-xs font-medium uppercase tracking-wider text-apple-dark/40">
+                      Amount
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-medium text-apple-dark/40">
+                        ₹
+                      </span>
+                      <input
+                        id="debt-amount"
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        value={debtAmount}
+                        onChange={(e) => setDebtAmount(e.target.value)}
+                        required
+                        placeholder="0.00"
+                        className="w-full rounded-xl border border-apple-mid bg-white/50 py-2.5 pl-8 pr-4 text-sm font-semibold text-apple-dark placeholder-apple-dark/20 focus:border-apple-dark/30 focus:ring-2 focus:ring-apple-dark/10"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="debt-purpose" className="mb-1 block text-xs font-medium uppercase tracking-wider text-apple-dark/40">
+                      Justification / Purpose
+                    </label>
+                    <input
+                      id="debt-purpose"
+                      type="text"
+                      value={debtPurpose}
+                      onChange={(e) => setDebtPurpose(e.target.value)}
+                      required
+                      placeholder="e.g., Office Rent, Server Costs"
+                      className="w-full rounded-xl border border-apple-mid bg-white/50 px-3 py-2.5 text-sm text-apple-dark placeholder-apple-dark/20 focus:border-apple-dark/30 focus:ring-2 focus:ring-apple-dark/10"
+                    />
+                  </div>
+
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowDebtModal(false)}
+                      className="flex-1 rounded-xl bg-apple-mid/50 py-2.5 text-xs font-medium text-apple-dark"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={debtSubmitting}
+                      className="flex-1 rounded-xl bg-status-rejected py-2.5 text-xs font-semibold text-white disabled:opacity-50"
+                    >
+                      {debtSubmitting ? 'Recording...' : 'Record Debt'}
+                    </button>
+                  </div>
+                </form>
               </motion.div>
             </motion.div>
           )}
