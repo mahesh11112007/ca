@@ -35,7 +35,7 @@ export const register = (username, password, role) =>
 
 export const getMe = () => api.get('/api/auth/me')
 
-export const getTransactions = () => api.get('/api/transactions')
+export const getTransactions = () => api.get(`/api/transactions?t=${Date.now()}`)
 
 export const createTransaction = (data) =>
   api.post('/api/transactions', data)

@@ -20,7 +20,7 @@ def _get_db_session():
 
 @dashboard_bp.route("/stats", methods=["GET"])
 @token_required
-@role_required("Receiver")
+@role_required("Sender", "Receiver")
 def stats(current_user):
     """Get aggregate dashboard statistics.
 

@@ -23,23 +23,30 @@ def token_required(f):
     @functools.wraps(f)
     def decorated(*args, **kwargs):
         auth_header = request.headers.get("Authorization")
+        print(f"[DEBUG AUTH] Path: {request.path}, Method: {request.method}")
+        print(f"[DEBUG AUTH] Auth Header: {auth_header}")
 
         if not auth_header:
+            print("[DEBUG AUTH] Missing authorization header")
             return jsonify({"error": "Authorization header is missing"}), 401
 
         parts = auth_header.split()
         if len(parts) != 2 or parts[0].lower() != "bearer":
+            print("[DEBUG AUTH] Invalid authorization header format")
             return jsonify({"error": "Invalid authorization header format. Use: Bearer <token>"}), 401
 
         token = parts[1]
 
         try:
             payload = decode_access_token(token)
+            print(f"[DEBUG AUTH] Token decoded successfully, payload sub: {payload.get('sub')}")
         except ValueError as e:
+            print(f"[DEBUG AUTH] Token decoding failed: {e}")
             return jsonify({"error": str(e)}), 401
 
         user_id = payload.get("sub")
         if not user_id:
+            print("[DEBUG AUTH] Token payload missing 'sub'")
             return jsonify({"error": "Invalid token payload"}), 401
 
         # Get or create a DB session for this request
@@ -50,8 +57,10 @@ def token_required(f):
 
         current_user = db.query(User).filter(User.id == user_id).first()
         if not current_user:
+            print(f"[DEBUG AUTH] User not found for id {user_id}")
             return jsonify({"error": "User not found"}), 401
 
+        print(f"[DEBUG AUTH] Authenticated user: {current_user.username} (Role: {current_user.role})")
         kwargs["current_user"] = current_user
         return f(*args, **kwargs)
 
