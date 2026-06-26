@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useAuth } from '../hooks/useAuth'
 import AnimatedPage from '../components/AnimatedPage'
 import GlassCard from '../components/GlassCard'
 import StatusBadge from '../components/StatusBadge'
@@ -41,6 +42,7 @@ const TypeBadge = ({ type }) => {
 }
 
 export default function SenderDashboard() {
+  const { user } = useAuth()
   const [transactions, setTransactions] = useState([])
   const [amount, setAmount] = useState('')
   const [purpose, setPurpose] = useState('')
@@ -123,7 +125,7 @@ export default function SenderDashboard() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8 text-2xl font-bold tracking-tight text-apple-dark sm:text-3xl"
         >
-          Sender Dashboard
+          {user ? `${user.username}'s Dashboard` : 'Sender Dashboard'}
         </motion.h2>
 
         {/* Dynamic Net Ledger Balance Card */}
