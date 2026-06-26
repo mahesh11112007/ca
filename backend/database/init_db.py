@@ -14,7 +14,7 @@ def init_db():
 
     Base.metadata.create_all(bind=engine)
 
-    # SQLite/Postgres local schema migration check for 'type' column
+    # SQLite/Postgres local schema migration check for 'type' column and 'upi_link' column
     try:
         from sqlalchemy import inspect, text
         inspector = inspect(engine)
@@ -23,5 +23,11 @@ def init_db():
             with engine.begin() as conn:
                 conn.execute(text("ALTER TABLE transactions ADD COLUMN type VARCHAR(20) DEFAULT 'Payment' NOT NULL"))
                 print("Database Migration: Added 'type' column to 'transactions' table.")
+        
+        columns_users = [col['name'] for col in inspector.get_columns('users')]
+        if 'upi_link' not in columns_users:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE users ADD COLUMN upi_link TEXT"))
+                print("Database Migration: Added 'upi_link' column to 'users' table.")
     except Exception as e:
         print(f"Skipped database migration check: {e}")

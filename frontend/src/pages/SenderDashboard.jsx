@@ -50,6 +50,7 @@ export default function SenderDashboard() {
   const [showSuccess, setShowSuccess] = useState(false)
   const [loadingTxns, setLoadingTxns] = useState(true)
   const [qrCode, setQrCode] = useState(null)
+  const [upiLink, setUpiLink] = useState('')
   const [loadingQr, setLoadingQr] = useState(true)
 
   const fetchTransactions = async () => {
@@ -60,8 +61,13 @@ export default function SenderDashboard() {
         getDashboardStats()
       ])
       
-      if (qrRes.status === 'fulfilled' && qrRes.value.data.qr_code) {
-        setQrCode(qrRes.value.data.qr_code)
+      if (qrRes.status === 'fulfilled') {
+        if (qrRes.value.data.qr_code) {
+          setQrCode(qrRes.value.data.qr_code)
+        }
+        if (qrRes.value.data.upi_link) {
+          setUpiLink(qrRes.value.data.upi_link)
+        }
       }
 
       if (txnRes.status === 'fulfilled') {
@@ -128,23 +134,23 @@ export default function SenderDashboard() {
             transition={{ delay: 0.05 }}
             className="mb-8"
           >
-            <GlassCard className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-6 bg-gradient-to-r from-apple-dark to-apple-black text-white shadow-xl">
+            <GlassCard className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-6 bg-white/80 border border-apple-mid text-apple-dark shadow-xl">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-white/60">
+                <p className="text-xs font-semibold uppercase tracking-wider text-apple-dark/60">
                   Total Ledger Balance
                 </p>
-                <h3 className="mt-1 text-3xl font-extrabold tracking-tight">
+                <h3 className="mt-1 text-3xl font-extrabold tracking-tight text-apple-black">
                   {formatCurrency(stats.net_balance)}
                 </h3>
               </div>
-              <div className="mt-4 sm:mt-0 flex gap-6 text-sm text-white/80">
+              <div className="mt-4 sm:mt-0 flex gap-6 text-sm text-apple-dark/80">
                 <div>
-                  <span className="block text-xs text-white/50">Total Payments Sent</span>
-                  <span className="font-semibold">{formatCurrency(stats.total_payments_approved)}</span>
+                  <span className="block text-xs text-apple-dark/50">Total Payments Sent</span>
+                  <span className="font-semibold text-apple-black">{formatCurrency(stats.total_payments_approved)}</span>
                 </div>
-                <div className="border-l border-white/20 pl-6">
-                  <span className="block text-xs text-white/50">Total Disbursements Received</span>
-                  <span className="font-semibold">{formatCurrency(stats.total_requests_approved)}</span>
+                <div className="border-l border-apple-mid pl-6">
+                  <span className="block text-xs text-apple-dark/50">Total Disbursements Received</span>
+                  <span className="font-semibold text-apple-black">{formatCurrency(stats.total_requests_approved)}</span>
                 </div>
               </div>
             </GlassCard>
@@ -174,19 +180,25 @@ export default function SenderDashboard() {
                     ))}
                   </div>
                 ) : (
-                  <img
-                    src={qrCode || "/qr-placeholder.png"}
-                    alt="Payment QR Code"
-                    className="h-full w-full object-contain"
-                    onError={(e) => {
-                      e.target.style.display = 'none'
-                      e.target.parentElement.innerHTML =
-                        '<div class="flex h-full w-full items-center justify-center text-apple-dark/20"><svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></div>'
-                    }}
-                  />
+                  <a 
+                    href={upiLink || "upi://pay?pa=8125703790@ybl&pn=Mahesh&cu=INR"} 
+                    className="h-full w-full block cursor-pointer transition-transform hover:scale-105"
+                    title="Tap to pay directly via payment app"
+                  >
+                    <img
+                      src={qrCode || "/qr-placeholder.png"}
+                      alt="Payment QR Code"
+                      className="h-full w-full object-contain"
+                      onError={(e) => {
+                        e.target.style.display = 'none'
+                        e.target.parentElement.innerHTML =
+                          '<div class="flex h-full w-full items-center justify-center text-apple-dark/20"><svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></div>'
+                      }}
+                    />
+                  </a>
                 )}
               </div>
-              <p className="text-sm text-apple-dark/40">Scan to make payment</p>
+              <p className="text-xs font-semibold text-apple-dark/60">Scan QR or tap on it to pay directly via app</p>
             </GlassCard>
           </motion.div>
 

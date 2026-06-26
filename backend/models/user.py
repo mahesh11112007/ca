@@ -23,6 +23,7 @@ class User(Base):
         DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
     )
     qr_code = Column(Text, nullable=True)
+    upi_link = Column(Text, nullable=True)
     push_subscription = Column(Text, nullable=True)
 
     # Relationships
@@ -50,6 +51,7 @@ class User(Base):
             "username": self.username,
             "role": self.role,
             "qr_code": self.qr_code,
+            "upi_link": self.upi_link,
             "push_subscription": self.push_subscription,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }

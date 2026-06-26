@@ -4,7 +4,7 @@ import AnimatedPage from '../components/AnimatedPage'
 import GlassCard from '../components/GlassCard'
 import StatusBadge from '../components/StatusBadge'
 import EmptyState from '../components/EmptyState'
-import { getTransactions, approveTransaction, rejectTransaction, getDashboardStats, uploadQrCode, getVapidPublicKey, savePushSubscription, createTransaction } from '../services/api'
+import { getTransactions, approveTransaction, rejectTransaction, getDashboardStats, uploadQrCode, getVapidPublicKey, savePushSubscription, createTransaction, getQrCode, updatePaymentSettings } from '../services/api'
 import { formatCurrency, formatDate, formatTime, truncateText } from '../utils/helpers'
 
 const cardVariants = {
@@ -78,6 +78,8 @@ export default function ReceiverDashboard() {
   const [confirmAction, setConfirmAction] = useState(null)
   const [actionLoading, setActionLoading] = useState(null)
   const [uploadingQr, setUploadingQr] = useState(false)
+  const [upiLink, setUpiLink] = useState('')
+  const [savingUpi, setSavingUpi] = useState(false)
   const [notifications, setNotifications] = useState([])
   
   // Debt recording modal states
@@ -88,6 +90,33 @@ export default function ReceiverDashboard() {
 
   const prevPendingIdsRef = useRef(new Set())
   const isFirstLoadRef = useRef(true)
+
+  useEffect(() => {
+    const fetchUpi = async () => {
+      try {
+        const res = await getQrCode()
+        if (res.data && res.data.upi_link) {
+          setUpiLink(res.data.upi_link)
+        }
+      } catch (err) {
+        console.error("Failed to fetch UPI link:", err)
+      }
+    }
+    fetchUpi()
+  }, [])
+
+  const handleUpiSave = async (e) => {
+    e.preventDefault()
+    setSavingUpi(true)
+    try {
+      await updatePaymentSettings({ upi_link: upiLink })
+      alert('UPI Link updated successfully!')
+    } catch (err) {
+      alert('Failed to update UPI link')
+    } finally {
+      setSavingUpi(false)
+    }
+  }
 
   const playChime = () => {
     try {
@@ -421,6 +450,29 @@ export default function ReceiverDashboard() {
                   className="hidden" 
                 />
               </label>
+              
+              <div className="mt-3">
+                <label htmlFor="upi-link-input" className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-apple-dark/40">
+                  UPI Link / URL (Optional)
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    id="upi-link-input"
+                    type="text"
+                    value={upiLink}
+                    onChange={(e) => setUpiLink(e.target.value)}
+                    placeholder="upi://pay?pa=..."
+                    className="flex-1 rounded-lg border border-apple-mid bg-white/50 px-2 py-1 text-xs text-apple-dark placeholder-apple-dark/30 transition-all focus:border-apple-dark/30 focus:ring-1 focus:ring-apple-dark/10"
+                  />
+                  <button
+                    onClick={handleUpiSave}
+                    disabled={savingUpi}
+                    className="rounded-lg bg-apple-dark px-3 py-1 text-xs font-semibold text-white hover:bg-apple-black transition-colors disabled:opacity-50"
+                  >
+                    {savingUpi ? '...' : 'Save'}
+                  </button>
+                </div>
+              </div>
             </div>
             
             <div className="border-t border-apple-mid/30 pt-3">

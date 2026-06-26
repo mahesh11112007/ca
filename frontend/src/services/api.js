@@ -53,6 +53,9 @@ export const getQrCode = () => api.get('/api/auth/qr')
 export const uploadQrCode = (base64Str) => 
   api.put('/api/auth/qr', { qr_code: base64Str })
 
+export const updatePaymentSettings = (data) =>
+  api.put('/api/auth/qr', data)
+
 export const getVapidPublicKey = () => api.get('/api/auth/vapid-public-key')
 
 export const savePushSubscription = (subscription) =>

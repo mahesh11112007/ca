@@ -74,26 +74,32 @@ def get_me(current_user):
 @token_required
 @role_required("Receiver")
 def upload_qr(current_user):
-    """Upload a payment QR code (Base64)."""
+    """Upload a payment QR code (Base64) and/or update UPI link."""
     data = request.get_json(silent=True)
-    if not data or "qr_code" not in data:
-        return jsonify({"error": "Missing qr_code in body"}), 400
+    if not data:
+        return jsonify({"error": "Missing request body"}), 400
 
     db = _get_db_session()
-    current_user.qr_code = data["qr_code"]
+    if "qr_code" in data:
+        current_user.qr_code = data["qr_code"]
+    if "upi_link" in data:
+        current_user.upi_link = data["upi_link"]
+        
     db.commit()
-    return jsonify({"message": "QR code updated successfully"}), 200
+    return jsonify({"message": "Payment settings updated successfully"}), 200
 
 
 @auth_bp.route("/qr", methods=["GET"])
 @token_required
 def get_qr(current_user):
-    """Get the active payment QR code from a Receiver."""
+    """Get the active payment QR code and UPI link from a Receiver."""
     db = _get_db_session()
-    receiver = db.query(User).filter(User.role == "Receiver", User.qr_code.isnot(None)).first()
+    receiver = db.query(User).filter(User.role == "Receiver").first()
     
     qr_code = receiver.qr_code if receiver else None
-    return jsonify({"qr_code": qr_code}), 200
+    upi_link = receiver.upi_link if (receiver and receiver.upi_link) else "upi://pay?pa=8125703790@ybl&pn=Mahesh&cu=INR"
+    
+    return jsonify({"qr_code": qr_code, "upi_link": upi_link}), 200
 
 
 @auth_bp.route("/vapid-public-key", methods=["GET"])
