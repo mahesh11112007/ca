@@ -16,7 +16,7 @@ def seed_users():
     init_db()
     db = get_db()
     users_to_add = [
-        {"username": "Mahesh", "password_raw": "123456", "role": "Receiver"},
+        {"username": "Mahesh", "password_raw": "1234567", "role": "Receiver"},
         {"username": "Vignesh", "password_raw": "123456", "role": "Sender"},
         {"username": "Shiva", "password_raw": "123456", "role": "Sender"},
     ]
