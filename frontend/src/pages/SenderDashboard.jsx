@@ -54,6 +54,7 @@ export default function SenderDashboard() {
   const [qrCode, setQrCode] = useState(null)
   const [upiLink, setUpiLink] = useState('')
   const [loadingQr, setLoadingQr] = useState(true)
+  const [qrAmount, setQrAmount] = useState('')
 
   const fetchTransactions = async () => {
     try {
@@ -62,7 +63,7 @@ export default function SenderDashboard() {
         getTransactions(),
         getDashboardStats()
       ])
-      
+
       if (qrRes.status === 'fulfilled') {
         if (qrRes.value.data.qr_code) {
           setQrCode(qrRes.value.data.qr_code)
@@ -166,9 +167,20 @@ export default function SenderDashboard() {
             transition={{ delay: 0.1 }}
           >
             <GlassCard className="flex flex-col items-center text-center shadow-lg shadow-black/5">
-              <h3 className="mb-6 text-lg font-semibold text-apple-dark">
+              <h3 className="mb-4 text-lg font-semibold text-apple-dark">
                 Payment QR Code
               </h3>
+              <div className="mb-4 w-full px-4">
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={qrAmount}
+                  onChange={(e) => setQrAmount(e.target.value)}
+                  placeholder="Enter Amount to Pay"
+                  className="w-full rounded-xl border border-apple-mid bg-white/50 py-2.5 text-center text-sm font-medium text-apple-dark placeholder-apple-dark/30 transition-all focus:border-apple-dark/30 focus:ring-2 focus:ring-apple-dark/10"
+                />
+              </div>
               <div className="mb-6 flex h-56 w-56 items-center justify-center rounded-2xl bg-white p-4 shadow-inner">
                 {loadingQr ? (
                   <div className="flex gap-2">
@@ -182,8 +194,8 @@ export default function SenderDashboard() {
                     ))}
                   </div>
                 ) : (
-                  <a 
-                    href={upiLink || "upi://pay?pa=8125703790@ybl&pn=Mahesh&cu=INR"} 
+                  <a
+                    href={`${upiLink || "upi://pay?pa=8125703790@ybl&pn=Mahesh&cu=INR"}${qrAmount ? `&am=${qrAmount}` : ''}`}
                     className="h-full w-full block cursor-pointer transition-transform hover:scale-105"
                     title="Tap to pay directly via payment app"
                   >
@@ -215,22 +227,20 @@ export default function SenderDashboard() {
                 <button
                   type="button"
                   onClick={() => setType('Payment')}
-                  className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all ${
-                    type === 'Payment'
-                      ? 'bg-white text-apple-dark shadow-sm'
-                      : 'text-apple-dark/40 hover:text-apple-dark/60'
-                  }`}
+                  className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all ${type === 'Payment'
+                    ? 'bg-white text-apple-dark shadow-sm'
+                    : 'text-apple-dark/40 hover:text-apple-dark/60'
+                    }`}
                 >
                   Notify Payment
                 </button>
                 <button
                   type="button"
                   onClick={() => setType('Request')}
-                  className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all ${
-                    type === 'Request'
-                      ? 'bg-white text-apple-dark shadow-sm'
-                      : 'text-apple-dark/40 hover:text-apple-dark/60'
-                  }`}
+                  className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all ${type === 'Request'
+                    ? 'bg-white text-apple-dark shadow-sm'
+                    : 'text-apple-dark/40 hover:text-apple-dark/60'
+                    }`}
                 >
                   Request Money
                 </button>
