@@ -440,18 +440,8 @@ export default function ReceiverDashboard() {
           <GlassCard padding="p-4" className="shadow-sm shadow-black/5 flex flex-col justify-between gap-4">
             <div>
               <h3 className="mb-2 text-sm font-bold text-apple-dark">Payment Settings</h3>
-              <label className="relative flex cursor-pointer items-center justify-center rounded-xl border border-dashed border-apple-mid bg-white/30 py-2.5 text-xs font-semibold text-apple-dark transition-colors hover:bg-white/50">
-                {uploadingQr ? 'Uploading...' : 'Upload New QR Code'}
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  onChange={handleQrUpload} 
-                  disabled={uploadingQr}
-                  className="hidden" 
-                />
-              </label>
               
-              <div className="mt-3">
+              <div className="mt-2">
                 <label htmlFor="upi-link-input" className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-apple-dark/40">
                   UPI Link / URL (Optional)
                 </label>
