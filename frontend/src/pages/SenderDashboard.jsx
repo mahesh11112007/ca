@@ -55,6 +55,20 @@ export default function SenderDashboard() {
   const [upiLink, setUpiLink] = useState('')
   const [loadingQr, setLoadingQr] = useState(true)
   const [qrAmount, setQrAmount] = useState('')
+  const [copied, setCopied] = useState(false)
+
+  const extractUpiId = (link) => {
+    if (!link) return '8125703790@ybl';
+    const match = link.match(/[?&]pa=([^&]+)/);
+    return match ? decodeURIComponent(match[1]) : '8125703790@ybl';
+  };
+
+  const handleCopyUpi = () => {
+    const upiId = extractUpiId(upiLink);
+    navigator.clipboard.writeText(upiId);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const fetchTransactions = async () => {
     try {
@@ -191,7 +205,7 @@ export default function SenderDashboard() {
 
               <a
                 href={`${upiLink || "upi://pay?pa=8125703790@ybl&pn=Mahesh&cu=INR"}${qrAmount ? `&am=${qrAmount}` : ''}`}
-                className="w-full max-w-xs block"
+                className="w-full max-w-xs block mb-4"
               >
                 <motion.button
                   whileHover={{ scale: 1.02 }}
@@ -202,6 +216,27 @@ export default function SenderDashboard() {
                   PAY
                 </motion.button>
               </a>
+
+              <div className="w-full max-w-xs border-t border-apple-mid/30 pt-4 flex flex-col items-center">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-apple-dark/40 mb-2">
+                  Or Pay Manually via UPI ID
+                </p>
+                <div className="flex w-full items-center justify-between gap-2 rounded-xl bg-apple-light p-2 border border-apple-mid/50">
+                  <span className="text-xs font-semibold text-apple-dark truncate select-all px-1">
+                    {extractUpiId(upiLink)}
+                  </span>
+                  <button
+                    onClick={handleCopyUpi}
+                    type="button"
+                    className="rounded-lg bg-apple-dark px-2.5 py-1.5 text-[10px] font-bold text-white hover:bg-apple-black transition-colors"
+                  >
+                    {copied ? 'COPIED!' : 'COPY'}
+                  </button>
+                </div>
+                <p className="text-[10px] text-apple-dark/40 mt-2 text-center leading-normal">
+                  Note: UPI rules may block browser payments to personal accounts. If PAY fails, copy the UPI ID above and paste it directly into GPay or PhonePe.
+                </p>
+              </div>
             </GlassCard>
           </motion.div>
 
