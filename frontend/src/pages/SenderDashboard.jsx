@@ -166,53 +166,42 @@ export default function SenderDashboard() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-            <GlassCard className="flex flex-col items-center text-center shadow-lg shadow-black/5">
-              <h3 className="mb-4 text-lg font-semibold text-apple-dark">
-                Payment QR Code
+            <GlassCard className="flex flex-col items-center text-center shadow-lg shadow-black/5 justify-center py-8 px-6 min-h-[380px]">
+              <h3 className="mb-2 text-lg font-semibold text-apple-dark">
+                Direct UPI Payment
               </h3>
-              <div className="mb-4 w-full px-4">
+              <p className="mb-6 text-xs text-apple-dark/40 max-w-xs">
+                Enter the amount below and tap the button to pay directly via your installed UPI payment app.
+              </p>
+              
+              <div className="mb-6 w-full max-w-xs">
+                <label className="mb-1.5 block text-left text-xs font-semibold uppercase tracking-wider text-apple-dark/50">
+                  Payment Amount
+                </label>
                 <input
                   type="number"
                   step="0.01"
-                  min="0"
+                  min="0.01"
                   value={qrAmount}
                   onChange={(e) => setQrAmount(e.target.value)}
-                  placeholder="Enter Amount to Pay"
-                  className="w-full rounded-xl border border-apple-mid bg-white/50 py-2.5 text-center text-sm font-medium text-apple-dark placeholder-apple-dark/30 transition-all focus:border-apple-dark/30 focus:ring-2 focus:ring-apple-dark/10"
+                  placeholder="0.00"
+                  className="w-full rounded-xl border border-apple-mid bg-white/50 py-3 text-center text-xl font-bold text-apple-dark placeholder-apple-dark/30 transition-all focus:border-apple-dark/30 focus:ring-2 focus:ring-apple-dark/10"
                 />
               </div>
-              <div className="mb-6 flex h-56 w-56 items-center justify-center rounded-2xl bg-white p-4 shadow-inner">
-                {loadingQr ? (
-                  <div className="flex gap-2">
-                    {[0, 1, 2].map((i) => (
-                      <motion.div
-                        key={i}
-                        animate={{ y: [0, -8, 0] }}
-                        transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.15 }}
-                        className="h-2.5 w-2.5 rounded-full bg-apple-dark/30"
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <a
-                    href={`${upiLink || "upi://pay?pa=8125703790@ybl&pn=Mahesh&cu=INR"}${qrAmount ? `&am=${qrAmount}` : ''}`}
-                    className="h-full w-full block cursor-pointer transition-transform hover:scale-105"
-                    title="Tap to pay directly via payment app"
-                  >
-                    <img
-                      src={qrCode || "/qr-placeholder.png"}
-                      alt="Payment QR Code"
-                      className="h-full w-full object-contain"
-                      onError={(e) => {
-                        e.target.style.display = 'none'
-                        e.target.parentElement.innerHTML =
-                          '<div class="flex h-full w-full items-center justify-center text-apple-dark/20"><svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></div>'
-                      }}
-                    />
-                  </a>
-                )}
-              </div>
-              <p className="text-xs font-semibold text-apple-dark/60">Scan QR or tap on it to pay directly via app</p>
+
+              <a
+                href={`${upiLink || "upi://pay?pa=8125703790@ybl&pn=Mahesh&cu=INR"}${qrAmount ? `&am=${qrAmount}` : ''}`}
+                className="w-full max-w-xs block"
+              >
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  type="button"
+                  className="w-full rounded-xl bg-status-approved py-3.5 text-base font-bold text-white shadow-lg shadow-status-approved/20 hover:bg-emerald-600 transition-colors"
+                >
+                  PAY
+                </motion.button>
+              </a>
             </GlassCard>
           </motion.div>
 
