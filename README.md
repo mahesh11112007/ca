@@ -10,7 +10,7 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon.tech-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://neon.tech)
 [![JWT](https://img.shields.io/badge/Auth-JWT_Tokens-000000?style=for-the-badge&logo=jsonwebtokens&logoColor=white)](https://jwt.io)
 [![Vercel](https://img.shields.io/badge/Vercel-Deployed-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://vercel.com)
-[![Developer](https://img.shields.io/badge/Developer-Mahesh_Vilasagaram-0052CC?style=for-the-badge&logo=github)](https://github.com/mahesh11112007)
+[![Developer](https://img.shields.io/badge/Developer-Mahesh_Vilasagaram-0052CC?style=for-the-badge&logo=github)](https://github.com/themaheshbuilds)
 
 [Overview](#-overview) • [System Architecture](#-system-architecture) • [Features](#-key-features) • [API Reference](#-api-reference) • [Quick Start](#-quick-start) • [Deployment](#-deployment-guide)
 
@@ -159,7 +159,7 @@ erDiagram
 
 ### 1. Clone Repository
 ```bash
-git clone https://github.com/mahesh11112007/ca.git
+git clone https://github.com/themaheshbuilds/ca.git
 cd ca
 ```
 
@@ -257,6 +257,6 @@ Private — All rights reserved.
 ### 👨‍💻 Architected & Engineered by **Mahesh Vilasagaram**
 *AI-First Full-Stack Software Engineer*
 
-[![GitHub](https://img.shields.io/badge/GitHub-mahesh11112007-181717?style=for-the-badge&logo=github)](https://github.com/mahesh11112007)
+[![GitHub](https://img.shields.io/badge/GitHub-themaheshbuilds-181717?style=for-the-badge&logo=github)](https://github.com/themaheshbuilds)
 
 </div>
