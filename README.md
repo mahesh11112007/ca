@@ -258,5 +258,7 @@ Private — All rights reserved.
 *AI-First Full-Stack Software Engineer*
 
 [![GitHub](https://img.shields.io/badge/GitHub-themaheshbuilds-181717?style=for-the-badge&logo=github)](https://github.com/themaheshbuilds)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0A66C2?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/mahesh-vilasagaram)
+[![Email](https://img.shields.io/badge/Email-Contact-EA4335?style=for-the-badge&logo=gmail&logoColor=white)](mailto:vilasagarammahesh90@gmail.com)
 
 </div>
