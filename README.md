@@ -1,222 +1,255 @@
-# CA Ledger Management System
+<div align="center">
 
-A production-grade Role-Based Ledger Management System for Chartered Accountants. Clients notify the CA about payments they've made, and the CA can review, approve, or reject those entries — with full audit logging.
+# 📑 CA LEDGER MANAGEMENT SYSTEM
+### *Enterprise Role-Based Financial Ledger & Audit Logging Platform*
+
+[![React](https://img.shields.io/badge/React-18.2-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://reactjs.org/)
+[![Vite](https://img.shields.io/badge/Vite-5.0-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![Python](https://img.shields.io/badge/Python-Flask%2FFastAPI-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon.tech-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://neon.tech)
+[![JWT](https://img.shields.io/badge/Auth-JWT_Tokens-000000?style=for-the-badge&logo=jsonwebtokens&logoColor=white)](https://jwt.io)
+[![Vercel](https://img.shields.io/badge/Vercel-Deployed-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://vercel.com)
+
+[Overview](#-overview) • [System Architecture](#-system-architecture) • [Features](#-key-features) • [API Reference](#-api-reference) • [Quick Start](#-quick-start) • [Deployment](#-deployment-guide)
 
 ---
 
-## Architecture
+</div>
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | React 18 + Vite + Tailwind CSS v4 + Framer Motion |
-| Backend | Python Flask + SQLAlchemy + JWT |
-| Database | Neon PostgreSQL |
-| Auth | JWT (python-jose) + bcrypt (passlib) |
-| Deployment | Vercel (Frontend static + Backend serverless) |
+## 📌 Overview
+
+**CA Ledger Management System** is a production-ready, full-stack financial ledger and approval workflow platform designed specifically for Chartered Accountants (CAs) and their corporate clients. 
+
+Clients (**Senders**) submit payment notifications with detailed breakdown records, and CAs (**Receivers**) inspect, approve, or reject incoming entries in real-time — maintaining an immutable audit log and live financial dashboard analytics.
 
 ---
 
-## Quick Start (Local Development)
+## ✨ Key Features
 
-### Prerequisites
+<div align="center">
 
-- Python 3.11+
-- Node.js 18+
-- A Neon PostgreSQL database (or any PostgreSQL instance)
+| Feature | Description | Target Role |
+| :--- | :--- | :---: |
+| 🛡️ **Role-Based Authorization** | Enforces strict boundaries between Senders (Clients) and Receivers (CAs) | Sender / Receiver |
+| 💸 **Transaction Submission** | Instant payment notification creation with amount, reference, & purpose tags | Sender |
+| ⭐ **CA Approval Desk** | Real-time review queue with single-click Approval or Rejection actions | Receiver (CA) |
+| 📜 **Audit Log Tracking** | Comprehensive, immutable ledger history with timestamps & status transitions | System |
+| 📊 **Financial Dashboard** | Live statistical metrics showing total approved, pending, & rejected balances | Receiver (CA) |
+| 🔍 **Filter & Search Studio** | Search by client username, filter by date range or transaction status | Both |
+| 🔑 **JWT Auth Engine** | Secure token-based session handling with 24-hour expiration & bcrypt hashing | System |
 
-### 1. Clone & Configure Environment
+</div>
 
-```bash
-# Backend
-cd backend
-cp .env.example .env
-# Edit .env with your database URL and JWT secret
+---
+
+## 🏗️ System Architecture
+
+```mermaid
+graph TD
+    Client["React 18 + Vite SPA"] -->|REST API Requests| API["Flask / FastAPI Serverless API"]
+    
+    subgraph Authentication & Middleware
+        API -->|JWT Verification| JWT["JWT Auth Engine"]
+        API -->|Password Hashing| Bcrypt["Bcrypt Security"]
+    end
+
+    subgraph Business Logic & Workflows
+        API --> TransactionService["Transaction Engine"]
+        API --> StatsService["Dashboard Analytics Service"]
+    end
+
+    subgraph Data & Audit Layer
+        TransactionService -->|SQLAlchemy ORM| DB[("Neon Cloud PostgreSQL")]
+        StatsService -->|Read Queries| DB
+    end
 ```
 
-```bash
-# Frontend
-cd frontend
-cp .env.example .env
-# Edit .env if needed (default proxies to localhost:8000)
+---
+
+## 🔄 Transaction Lifecycle Workflow
+
+```mermaid
+stateDiagram-v2
+    [*] --> Pending : Sender Submits Payment Entry
+    
+    state Pending {
+        [*] --> InReview : Receiver Inspects Ledger Entry
+    }
+
+    InReview --> Approved : Receiver Approves Transaction
+    InReview --> Rejected : Receiver Rejects Transaction
+
+    Approved --> AuditLogged : Generate Permanent Audit Entry
+    Rejected --> AuditLogged : Record Rejection Reason
+
+    AuditLogged --> [*]
 ```
 
-### 2. Start the Backend
+---
 
+## 🗄️ Database Entity-Relationship Model
+
+```mermaid
+erDiagram
+    USERS ||--o{ TRANSACTIONS : creates_or_receives
+    USERS ||--o{ AUDIT_LOGS : triggers
+
+    USERS {
+        int id PK
+        string username UK
+        string email UK
+        string password_hash
+        string role "sender | receiver"
+        datetime created_at
+    }
+
+    TRANSACTIONS {
+        int id PK
+        int sender_id FK
+        int receiver_id FK
+        float amount
+        string purpose
+        string status "pending | approved | rejected"
+        datetime created_at
+        datetime updated_at
+    }
+
+    AUDIT_LOGS {
+        int id PK
+        int transaction_id FK
+        int action_by_id FK
+        string action "APPROVED | REJECTED | CREATED"
+        datetime timestamp
+    }
+```
+
+---
+
+## 📡 API Reference
+
+### 🔐 Authentication
+| Method | Endpoint | Auth Required | Description |
+| :--- | :--- | :---: | :--- |
+| `POST` | `/api/auth/register` | No | Register a new user (`sender` or `receiver`) |
+| `POST` | `/api/auth/login` | No | Authenticate user & return JWT Bearer Token |
+| `GET` | `/api/auth/me` | Yes | Fetch authenticated user profile details |
+
+### 💳 Transactions
+| Method | Endpoint | Auth Required | Role Scope | Description |
+| :--- | :--- | :---: | :---: | :--- |
+| `POST` | `/api/transactions` | Yes | `sender` | Submit a new payment notification |
+| `GET` | `/api/transactions` | Yes | Both | List all transactions with search & filter |
+| `GET` | `/api/transactions/{id}` | Yes | Both | Get detailed view of single transaction |
+| `PATCH` | `/api/transactions/{id}/approve` | Yes | `receiver` | Approve pending payment & create audit log |
+| `PATCH` | `/api/transactions/{id}/reject` | Yes | `receiver` | Reject payment entry & record feedback |
+
+### 📊 Dashboard Analytics
+| Method | Endpoint | Auth Required | Role Scope | Description |
+| :--- | :--- | :---: | :---: | :--- |
+| `GET` | `/api/dashboard/stats` | Yes | `receiver` | Get aggregate totals, balances & status counts |
+
+---
+
+## 🚀 Quick Start Guide
+
+> [!IMPORTANT]
+> Requires **Python 3.11+** and **Node.js 18+** installed on your machine.
+
+### 1. Clone Repository
+```bash
+git clone https://github.com/mahesh11112007/ca.git
+cd ca
+```
+
+### 2. Backend Setup
 ```bash
 cd backend
 python -m venv venv
-venv\Scripts\activate        # Windows
-# source venv/bin/activate   # macOS/Linux
+
+# Windows
+venv\Scripts\activate
+# macOS / Linux: source venv/bin/activate
+
 pip install -r requirements.txt
-python main.py
+cp .env.example .env
 ```
 
-The backend will auto-create database tables on first startup.
+Set up your `.env` variables:
+```env
+DATABASE_URL=postgresql://username:password@ep-cool-name.neon.tech/dbname?sslmode=require
+JWT_SECRET_KEY=your_64_character_hex_secret_key
+JWT_ALGORITHM=HS256
+JWT_EXPIRATION_MINUTES=1440
+```
 
-### 3. Start the Frontend
-
+Run Backend Server:
 ```bash
-cd frontend
+python main.py
+```
+*Backend initializes automatically on `http://127.0.0.1:8000`.*
+
+### 3. Frontend Setup
+```bash
+cd ../frontend
 npm install
 npm run dev
 ```
-
-Open [http://localhost:5173](http://localhost:5173) in your browser.
-
-### 4. Create Test Accounts
-
-1. Register a **Receiver** account (the CA)
-2. Register a **Sender** account (the client)
-3. Login as Sender → submit a payment
-4. Login as Receiver → approve or reject
+Open **`http://localhost:5173`** in your browser.
 
 ---
 
-## Neon PostgreSQL Setup
+## 📁 Repository Structure
 
-1. Go to [https://neon.tech](https://neon.tech) and create a free account
-2. Create a new project (select your preferred region)
-3. Copy the connection string from the dashboard
-4. It will look like:
-   ```
-   postgresql://username:password@ep-cool-name-123456.us-east-2.aws.neon.tech/dbname?sslmode=require
-   ```
-5. Paste this into `backend/.env` as `DATABASE_URL`
-
-> **Tip**: Use Neon's connection pooler URL for better performance with serverless functions. In the Neon dashboard, find the "Pooled connection" URL.
-
----
-
-## Vercel Deployment
-
-### Backend Deployment
-
-1. Push the repo to GitHub
-2. In Vercel, create a **new project** → import repo → set **Root Directory** to `backend`
-3. Vercel auto-detects the Python serverless function in `api/index.py`
-4. Add environment variables in Vercel dashboard:
-   - `DATABASE_URL` — your Neon connection string
-   - `JWT_SECRET_KEY` — a random 64-character hex string (`python -c "import secrets; print(secrets.token_hex(32))"`)
-   - `JWT_ALGORITHM` — `HS256`
-   - `JWT_EXPIRATION_MINUTES` — `1440`
-   - `CORS_ORIGINS` — your frontend Vercel URL (e.g., `https://ca-ledger.vercel.app`)
-5. Deploy
-
-### Frontend Deployment
-
-1. In Vercel, create **another new project** → import same repo → set **Root Directory** to `frontend`
-2. Set **Build Command** to `npm run build`
-3. Set **Output Directory** to `dist`
-4. Add environment variable:
-   - `VITE_API_URL` — leave empty (the `vercel.json` rewrites handle proxying)
-5. Update `frontend/vercel.json` — replace the backend URL in the API rewrite with your actual backend Vercel URL
-6. Deploy
-
-### Generate JWT Secret
-
-```bash
-python -c "import secrets; print(secrets.token_hex(32))"
+```gcode
+ca/
+├── 📁 backend/                 # Python Flask / FastAPI Serverless Service
+│   ├── 📁 api/                 # Vercel Serverless Function Handler
+│   ├── 📁 config/              # Application Settings & ENV Readers
+│   ├── 📁 database/            # SQLAlchemy Engine & Pool Config
+│   ├── 📁 models/              # User, Transaction & Audit ORM Schemas
+│   ├── 📁 routes/              # Auth, Transaction & Dashboard Endpoints
+│   ├── 📄 main.py              # Application Entry point
+│   └── 📄 requirements.txt     # Python Dependencies
+├── 📁 frontend/                # React 18 + Vite Frontend Application
+│   ├── 📁 src/
+│   │   ├── 📁 components/      # Glassmorphism & UI Components
+│   │   ├── 📁 pages/           # Sender & Receiver Dashboard Views
+│   │   ├── 📁 context/         # AuthContext & Session Provider
+│   │   ├── 📁 services/        # Axios API Client Modules
+│   │   └── 📁 styles/          # Tailwind CSS v4 Styles
+│   ├── 📄 package.json         # Node Dependencies & Scripts
+│   └── 📄 vercel.json          # Frontend Routing Rules
+└── 📄 README.md                # Platform Documentation
 ```
 
 ---
 
-## API Endpoints
+## 🌐 Deployment Guide (Vercel + Neon PostgreSQL)
 
-### Authentication
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/api/auth/register` | No | Register new user |
-| POST | `/api/auth/login` | No | Login |
-| GET | `/api/auth/me` | Yes | Get profile |
-
-### Transactions
-| Method | Endpoint | Auth | Role | Description |
-|--------|----------|------|------|-------------|
-| POST | `/api/transactions` | Yes | Sender | Submit payment |
-| GET | `/api/transactions` | Yes | Both | List transactions |
-| GET | `/api/transactions/{id}` | Yes | Both | Get detail |
-| PATCH | `/api/transactions/{id}/approve` | Yes | Receiver | Approve |
-| PATCH | `/api/transactions/{id}/reject` | Yes | Receiver | Reject |
-
-### Dashboard
-| Method | Endpoint | Auth | Role | Description |
-|--------|----------|------|------|-------------|
-| GET | `/api/dashboard/stats` | Yes | Receiver | Get stats |
+1. **Database**: Provision a free PostgreSQL database on [Neon.tech](https://neon.tech) and copy your connection string.
+2. **Deploy Backend on Vercel**:
+   - Create a project on Vercel selecting `backend` as the Root Directory.
+   - Configure Environment Variables: `DATABASE_URL`, `JWT_SECRET_KEY`, `JWT_ALGORITHM`, `CORS_ORIGINS`.
+3. **Deploy Frontend on Vercel**:
+   - Create a separate project on Vercel selecting `frontend` as the Root Directory.
+   - Build Command: `npm run build` | Output Directory: `dist`.
 
 ---
 
-## Project Structure
+## 🛡️ Security Features
 
-```
-money/
-├── frontend/               # React + Vite SPA
-│   ├── src/
-│   │   ├── components/     # Reusable UI components
-│   │   ├── pages/          # Page components
-│   │   ├── context/        # React context (Auth)
-│   │   ├── services/       # API client (Axios)
-│   │   ├── hooks/          # Custom hooks
-│   │   ├── utils/          # Helpers & formatters
-│   │   ├── routes/         # Router configuration
-│   │   └── styles/         # Global CSS
-│   ├── vercel.json
-│   └── package.json
-│
-├── backend/                # FastAPI application
-│   ├── api/                # Vercel serverless entrypoint
-│   ├── config/             # Settings & configuration
-│   ├── database/           # SQLAlchemy connection & init
-│   ├── models/             # ORM models
-│   ├── schemas/            # Pydantic schemas
-│   ├── middleware/         # Auth middleware
-│   ├── routes/             # API route handlers
-│   ├── services/           # Business logic
-│   ├── utils/              # Security utilities
-│   ├── main.py             # FastAPI app factory
-│   ├── vercel.json
-│   └── requirements.txt
-│
-├── .gitignore
-└── README.md
-```
+- 🔒 **Bcrypt Password Hashing**: Passwords stored using 12 rounds of bcrypt hashing.
+- 🔑 **Cryptographic JWT Tokens**: Stateless HMAC-SHA256 signatures with 24h expiration.
+- 🛡️ **Role-Based Guards**: Strict role enforcement preventing client users from executing receiver functions.
+- 💉 **SQL Injection Prevention**: Full ORM query abstraction via SQLAlchemy.
 
 ---
 
-## Security
-
-- Passwords hashed with **bcrypt** (12 rounds)
-- Authentication via **JWT** (HS256, 24h expiry)
-- Role-based access control on all endpoints
-- Input validation with **Pydantic v2**
-- SQL injection prevention via **SQLAlchemy ORM**
-- CORS restricted to configured origins
-- No credentials hardcoded — all from environment variables
-
----
-
-## Testing Checklist
-
-- [ ] Register a Sender account
-- [ ] Register a Receiver account
-- [ ] Login as Sender
-- [ ] Submit a payment (amount + purpose)
-- [ ] Verify payment appears as Pending in history
-- [ ] Login as Receiver
-- [ ] Verify dashboard stats show 1 Pending request
-- [ ] Search by username
-- [ ] Filter by Pending status
-- [ ] Approve the payment
-- [ ] Verify audit log created (in DB)
-- [ ] Verify status changed to Approved
-- [ ] Login as Sender → verify status shows Approved
-- [ ] Submit another payment → Reject it as Receiver
-- [ ] Verify stats update correctly
-- [ ] Test invalid login (wrong password)
-- [ ] Test unauthorized access (Sender trying Receiver endpoints)
-- [ ] Deploy to Vercel → repeat smoke tests
-
----
-
-## License
+## 📜 License
 
 Private — All rights reserved.
+
+<div align="center">
+  <sub>Designed & Developed by <b><a href="https://github.com/mahesh11112007">mahesh11112007</a></b></sub>
+</div>
